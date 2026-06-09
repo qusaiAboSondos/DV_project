@@ -1,0 +1,36 @@
+# Simulation outputs
+simv
+simv.daidir/
+csrc/
+*.log
+*.vcd
+*.vpd
+*.fsdb
+*.shm/
+DVEfiles/
+ucli.key
+
+# Questa/ModelSim
+work/
+*.wlf
+vsim.wlf
+transcript
+
+# Xcelium
+xcelium.d/
+*.diag
+
+# Coverage databases
+*.vdb/
+cov_work/
+urgReport/
+
+# Compiled files
+*.so
+*.o
+*.a
+
+# Editor
+*.swp
+*~
+.DS_Store
