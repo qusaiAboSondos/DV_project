@@ -87,7 +87,7 @@ class bird_in_monitor extends uvm_monitor;
             pkt.payload[i] = stream[i];
 
         if (stream.size() >= total_bytes) begin
-            pkt.crc16 = {stream[pkt.payload_len], stream[pkt.payload_len + 1]};
+            pkt.crc16 = {stream[int'(pkt.payload_len)], stream[int'(pkt.payload_len) + 1]};
         end
 
         `uvm_info("bird_in_monitor",

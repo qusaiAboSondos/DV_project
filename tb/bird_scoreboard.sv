@@ -30,6 +30,10 @@ class bird_scoreboard extends uvm_scoreboard;
     byte unsigned remote_frags[int][int][];   // [seq_num][frag_num][bytes]
     int           remote_max_frag[int];       // max frag_num seen per seq_num
 
+    // Track which seq_num is currently being assembled (DUT has one assembly buffer)
+    // -1 means idle
+    int           active_seq_num;             // seq_num of in-flight remote assembly
+
     // Queue of expected remote output words
     logic [31:0]  expected_remote[$][$];
 
@@ -55,6 +59,7 @@ class bird_scoreboard extends uvm_scoreboard;
         observed_drop_cnt = 0;
         checks_passed     = 0;
         checks_failed     = 0;
+        active_seq_num    = -1;
     endfunction
 
     // -------------------------------------------------------------------------
@@ -93,6 +98,13 @@ class bird_scoreboard extends uvm_scoreboard;
         // Reserved bits nonzero
         if (!drop && (pkt.rsvd_7_1 != 0 || pkt.rsvd_23_21 != 0 || pkt.rsvd_31_29 != 0)) begin
             `uvm_info("bird_scoreboard", "Drop: nonzero reserved bits", UVM_MEDIUM)
+            expected_drop_cnt++;
+            drop = 1;
+        end
+
+        // Local traffic: FRAG_NUM must be 1, else drop
+        if (!drop && pkt.traffic_type == 0 && pkt.frag_num != 1) begin
+            `uvm_info("bird_scoreboard", "Drop: LOCAL packet with FRAG_NUM != 1", UVM_MEDIUM)
             expected_drop_cnt++;
             drop = 1;
         end
@@ -139,8 +151,39 @@ class bird_scoreboard extends uvm_scoreboard;
         int word_idx;
         logic [15:0] new_crc;
 
-        // Check for mismatched SEQ_NUM during ongoing accumulation
-        // (handled by tracking which seq_nums are in flight)
+        // --- Mismatched SEQ_NUM detection ---
+        // The DUT maintains ONE active assembly. If a fragment arrives with a
+        // seq_num that differs from the active assembly's seq_num, it is dropped.
+        // Additionally, the in-flight assembly is flushed (also counted as dropped).
+        if (active_seq_num == -1) begin
+            // No active assembly — this fragment starts a new one
+            active_seq_num = sn;
+        end else if (active_seq_num != sn) begin
+            // Mismatch: new fragment's seq_num differs from in-flight.
+            // The DUT drops the incoming fragment and flushes the in-flight assembly.
+            `uvm_info("bird_scoreboard",
+                $sformatf("Drop: mismatched SEQ_NUM in-flight=%0d incoming=%0d",
+                    active_seq_num, sn), UVM_MEDIUM)
+            // Drop the incoming fragment
+            expected_drop_cnt++;
+            // Flush (drop) the in-flight assembly
+            remote_frags.delete(active_seq_num);
+            remote_max_frag.delete(active_seq_num);
+            active_seq_num = -1;
+            return;
+        end else if (fn == 1 && remote_frags.exists(sn) && remote_frags[sn].exists(1)) begin
+            // frag_num=1 arrived again while a previous assembly (which already has frag 1)
+            // is still incomplete — this restarts the assembly but the spec treats it as drop
+            `uvm_info("bird_scoreboard",
+                "Drop: FRAG_NUM=1 while previous assembly incomplete (duplicate frag 1)", UVM_MEDIUM)
+            expected_drop_cnt++;
+            // Flush the incomplete in-flight assembly
+            remote_frags.delete(sn);
+            remote_max_frag.delete(sn);
+            active_seq_num = -1;
+            return;
+        end
+
         // Store fragment
         remote_frags[sn][fn] = new[pkt.payload.size()](pkt.payload);
 
@@ -177,26 +220,34 @@ class bird_scoreboard extends uvm_scoreboard;
                 // Recalculate CRC16 over merged payload
                 new_crc = bird_packet::calc_crc16(merged);
 
-                // Pack into 32-bit words (big-endian, pad last word with zeros)
-                words.delete();
+                // Append CRC (MSB first) to the merged byte stream before packing
                 begin
-                    int n = merged.size();
-                    int full_words = n / 4;
-                    int rem = n % 4;
+                    byte unsigned merged_with_crc[];
+                    int n;
+                    int full_words;
+                    int rem;
+                    merged_with_crc = new[merged.size() + 2];
+                    foreach (merged[i]) merged_with_crc[i] = merged[i];
+                    merged_with_crc[merged.size()]   = new_crc[15:8];
+                    merged_with_crc[merged.size()+1] = new_crc[7:0];
+
+                    // Pack into 32-bit words (big-endian, pad last word with zeros)
+                    words.delete();
+                    n = merged_with_crc.size();
+                    full_words = n / 4;
+                    rem = n % 4;
                     for (int w = 0; w < full_words; w++) begin
                         logic [31:0] word;
-                        word = {merged[w*4], merged[w*4+1], merged[w*4+2], merged[w*4+3]};
+                        word = {merged_with_crc[w*4],   merged_with_crc[w*4+1],
+                                merged_with_crc[w*4+2], merged_with_crc[w*4+3]};
                         words.push_back(word);
                     end
                     if (rem > 0) begin
                         logic [31:0] last_word = 32'h0;
                         for (int b = 0; b < rem; b++)
-                            last_word[31 - b*8 -: 8] = merged[full_words*4 + b];
+                            last_word[31 - b*8 -: 8] = merged_with_crc[full_words*4 + b];
                         words.push_back(last_word);
                     end
-                    // Append CRC as final 16-bit value in a 32-bit word
-                    // (CRC appended as MSB-first in final word or separate)
-                    words.push_back({new_crc, 16'h0});
                 end
 
                 expected_remote.push_back(words);
@@ -208,6 +259,7 @@ class bird_scoreboard extends uvm_scoreboard;
                 // Clean up accumulated state
                 remote_frags.delete(sn);
                 remote_max_frag.delete(sn);
+                active_seq_num = -1;  // ready for next remote assembly
             end
         end
     endfunction
@@ -311,11 +363,11 @@ class bird_scoreboard extends uvm_scoreboard;
     function void check_phase(uvm_phase phase);
         super.check_phase(phase);
 
-        // Check drop counter
-        if (observed_drop_cnt !== expected_drop_cnt) begin
+        // Check drop counter (16-bit wrapping per spec)
+        if (observed_drop_cnt !== (expected_drop_cnt & 16'hFFFF)) begin
             `uvm_error("bird_scoreboard",
-                $sformatf("drop_cnt mismatch: observed=%0d, expected=%0d",
-                    observed_drop_cnt, expected_drop_cnt))
+                $sformatf("drop_cnt mismatch: observed=%0d, expected=%0d (expected mod 65536=%0d)",
+                    observed_drop_cnt, expected_drop_cnt, expected_drop_cnt & 16'hFFFF))
             checks_failed++;
         end else begin
             `uvm_info("bird_scoreboard",

@@ -123,17 +123,32 @@ class remote_outoforder_seq extends bird_base_seq;
         bit [4:0] seq = $urandom_range(1, 31);
         int order[];
 
-        // Build shuffled order array
-        order = new[num_frags];
-        foreach (order[i]) order[i] = i + 1;
-        // Fisher-Yates shuffle
-        for (int i = num_frags - 1; i > 0; i--) begin
+        // Build shuffled order of frags 2..num_frags (frag 1 must go first per spec:
+        // FRAG_NUM==1 while previous incomplete is a drop condition, so frag 1
+        // always initiates the assembly).
+        order = new[num_frags - 1];
+        foreach (order[i]) order[i] = i + 2;  // 2, 3, ..., num_frags
+        // Fisher-Yates shuffle of frags 2..num_frags
+        for (int i = num_frags - 2; i > 0; i--) begin
             int j = $urandom_range(0, i);
             int tmp = order[i];
             order[i] = order[j];
             order[j] = tmp;
         end
 
+        // Always send frag 1 first to initiate assembly
+        pkt = bird_packet::type_id::create("pkt_f1");
+        start_item(pkt);
+        if (!pkt.randomize() with {
+            traffic_type == 1;
+            seq_num      == seq;
+            frag_num     == 1;
+            payload_len  inside {[4:32]};
+        })
+            `uvm_fatal("remote_outoforder_seq", "Randomisation failed for frag 1")
+        finish_item(pkt);
+
+        // Send remaining fragments in shuffled order
         foreach (order[i]) begin
             pkt = bird_packet::type_id::create(
                 $sformatf("pkt_f%0d", order[i]));
@@ -148,7 +163,8 @@ class remote_outoforder_seq extends bird_base_seq;
             finish_item(pkt);
         end
         `uvm_info("remote_outoforder_seq",
-            $sformatf("Sent %0d out-of-order remote frags seq=%0d", num_frags, seq), UVM_LOW)
+            $sformatf("Sent %0d out-of-order remote frags seq=%0d (frag1 first, rest shuffled)",
+                num_frags, seq), UVM_LOW)
     endtask
 endclass : remote_outoforder_seq
 
@@ -189,14 +205,13 @@ class drop_seq_num_zero_seq extends bird_base_seq;
     task body();
         bird_packet pkt = bird_packet::type_id::create("pkt");
         start_item(pkt);
+        // Disable the valid-seq constraint so seq_num==0 can be randomised
+        pkt.c_valid_seq_num.constraint_mode(0);
         if (!pkt.randomize() with {
             seq_num == 0;
-            // relax valid-seq constraint
         })
             `uvm_fatal("drop_seq_num_zero_seq", "Randomisation failed")
-        // Override: force seq_num=0 after randomise (constraint override)
-        pkt.seq_num = 0;
-        pkt.crc16   = bird_packet::calc_crc16(pkt.payload);
+        pkt.crc16 = bird_packet::calc_crc16(pkt.payload);
         finish_item(pkt);
         `uvm_info("drop_seq_num_zero_seq", "Sent SEQ_NUM=0 packet (expect drop)", UVM_LOW)
     endtask
