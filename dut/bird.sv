@@ -211,11 +211,26 @@ always_ff @(posedge clk or negedge rst_n) begin : input_fsm
                         //--- REMOTE traffic ---
                         if (acc_active) begin
                             if (cfg[28:24] != acc_seq) begin
-                                // Different SEQ: drop NEW
-                                drop_cnt_r <= drop_cnt_r + 16'd1;
-                                drop_total <= cfg[15:8] + 8'd2;
-                                drop_cnt_b <= 8'd1;
-                                in_st      <= IS_DROP;
+                                if (cfg[20:16] == 5'd1) begin
+                                    // FRAG_NUM=1 with different SEQ_NUM:
+                                    // drop OLD incomplete packet, start accumulating NEW
+                                    drop_cnt_r <= drop_cnt_r + 16'd1;
+                                    for (i = 0; i < MAX_FRAGS; i++) begin
+                                        frag_valid[i] <= 1'b0;
+                                        frag_len[i]   <= 8'd0;
+                                    end
+                                    frag_mem[cfg[20:16]][0] <= data_in;
+                                    acc_seq    <= cfg[28:24];
+                                    acc_active <= 1'b1;
+                                    pay_cnt    <= 8'd1;
+                                    in_st      <= (cfg[15:8] == 8'd1) ? IS_CRC0 : IS_PAYLOAD;
+                                end else begin
+                                    // FRAG_NUM != 1 with different SEQ_NUM: drop NEW fragment
+                                    drop_cnt_r <= drop_cnt_r + 16'd1;
+                                    drop_total <= cfg[15:8] + 8'd2;
+                                    drop_cnt_b <= 8'd1;
+                                    in_st      <= IS_DROP;
+                                end
 
                             end else if (cfg[20:16] == 5'd1) begin
                                 // FRAG_NUM==1 same SEQ while accumulating: drop OLD, start fresh
@@ -275,12 +290,8 @@ always_ff @(posedge clk or negedge rst_n) begin : input_fsm
                 if (in_vld & in_rdy) begin
                     if (r_traffic)
                         frag_mem[r_fnum][pay_cnt] <= data_in;
-                    if (pay_cnt == r_plen - 8'd1) begin
-                        // Last payload byte
-                        if (r_traffic)
-                            frag_len[r_fnum] <= r_plen;
+                    if (pay_cnt == r_plen - 8'd1)
                         in_st <= IS_CRC0;
-                    end
                     pay_cnt <= pay_cnt + 8'd1;
                 end
             end
@@ -295,7 +306,9 @@ always_ff @(posedge clk or negedge rst_n) begin : input_fsm
             IS_CRC1: begin
                 if (in_vld & in_rdy) begin
                     if (r_traffic) begin
-                        // Mark this fragment received
+                        // Mark this fragment complete (set len here to handle plen=1 case
+                        // where IS_PAYLOAD is skipped entirely)
+                        frag_len[r_fnum]   <= r_plen;
                         frag_valid[r_fnum] <= 1'b1;
 
                         // Check sequence completeness:
