@@ -32,6 +32,7 @@ package bird_pkg;
     `include "bird_out_monitor.sv"
     `include "bird_scoreboard.sv"
     `include "bird_coverage.sv"
+    `include "bird_checker.sv"
     `include "bird_agent.sv"
     `include "bird_env.sv"
     `include "bird_tests.sv"

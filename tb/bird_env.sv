@@ -13,6 +13,7 @@ class bird_env extends uvm_env;
     bird_out_monitor out_monitor;
     bird_scoreboard  scoreboard;
     bird_coverage    coverage;
+    bird_checker     checker;
 
     function new(string name = "bird_env", uvm_component parent = null);
         super.new(name, parent);
@@ -25,6 +26,7 @@ class bird_env extends uvm_env;
         out_monitor = bird_out_monitor::type_id::create("out_monitor", this);
         scoreboard  = bird_scoreboard::type_id::create("scoreboard",  this);
         coverage    = bird_coverage::type_id::create("coverage",      this);
+        checker     = bird_checker::type_id::create("checker",        this);
     endfunction
 
     function void connect_phase(uvm_phase phase);
