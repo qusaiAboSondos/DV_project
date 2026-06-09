@@ -1,0 +1,40 @@
+Test Plan ID,Feature / Spec Section,Test Description,Test Name,Pass Criteria,Priority,Notes
+TP-001,Section 6 – Local Traffic,Send a single valid local packet with minimum payload (1 byte),local_basic_test,Payload+CRC forwarded correctly on local output; no drop_cnt increment,High,FRAG_NUM=1 SEQ_NUM=1
+TP-002,Section 6 – Local Traffic,Send multiple back-to-back local packets,local_multi_test,All packets forwarded in order; no drops,High,Check no inter-packet corruption
+TP-003,Section 6 – Local Traffic,Send local packet with maximum payload (255 bytes),local_basic_test,All 255 bytes + CRC forwarded correctly,High,PAYLOAD_LEN=255
+TP-004,Section 6 – Local Traffic,Verify CRC16 forwarded unchanged for local traffic,local_basic_test,data_local stream ends with same CRC16 as input,High,CRC not recalculated for local
+TP-005,Section 6 – Local Traffic,Verify FRAG_NUM must be 1 for local packets; FRAG_NUM!=1 should be dropped,drop_conditions_test,drop_cnt increments by 1; no local output,High,Per spec FRAG_NUM shall equal 1 for local
+TP-006,Section 7 – Remote Traffic,Single-fragment remote packet (FRAG_NUM=1 only),remote_basic_test,Merged payload+new CRC16 output on remote interface,High,
+TP-007,Section 7 – Remote Traffic,Two-fragment remote packet arriving in order,remote_basic_test,Fragments merged in FRAG_NUM order; new CRC16 correct,High,
+TP-008,Section 7 – Remote Traffic,Multi-fragment remote packet arriving out of order,remote_outoforder_test,Output payload matches in-order concatenation regardless of arrival order,High,Key feature: reordering
+TP-009,Section 7 – Remote Traffic,Maximum fragment count (up to 31 fragments),remote_basic_test,All 31 fragments accumulated and output correctly,Medium,SEQ_NUM and FRAG_NUM up to 31
+TP-010,Section 7 – Remote Traffic,Verify new CRC16 is generated over merged payload,remote_basic_test,CRC16 in remote output matches recomputed CRC over merged payload,High,CRC-16/CCITT-FALSE
+TP-011,Section 7 – Remote Traffic,Verify cfg is NOT transmitted on remote output,remote_basic_test,data_remote stream contains only merged payload + CRC16,Medium,
+TP-012,Section 7 – Remote Traffic,Verify only one remote packet accumulated at a time,drop_conditions_test,Second simultaneous SEQ_NUM causes drop; first packet completes normally,High,
+TP-013,Section 3 – Handshake,Verify valid/ready transfer rule (transfer only when vld=1 AND rdy=1),local_basic_test,No data lost or duplicated when rdy toggles,High,
+TP-014,Section 3 – Handshake,Verify stability rule: signals remain stable when vld=1 and rdy=0 (backpressure),backpressure_test,Scoreboard detects no signal change during stall; packet received correctly,High,
+TP-015,Section 3 – Handshake,Local output backpressure: local_rdy=0 during transfer,backpressure_test,DUT deasserts in_rdy or holds local output until consumer ready,High,
+TP-016,Section 3 – Handshake,Remote output backpressure: remote_rdy=0 during transfer,backpressure_test,DUT holds remote output correctly under backpressure,High,
+TP-017,Section 2.3 – Sampling,cfg sampled on first payload byte when in_vld=1 and in_rdy=1,local_basic_test,TRAFFIC_TYPE SEQ_NUM FRAG_NUM PAYLOAD_LEN decoded correctly,High,
+TP-018,Section 5 – cfg,Verify TRAFFIC_TYPE bit correctly classifies local vs remote,local_basic_test / remote_basic_test,Local: data_local valid; Remote: data_remote valid,High,
+TP-019,Section 8.1 – Drop,SEQ_NUM == 0 causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,
+TP-020,Section 8.1 – Drop,FRAG_NUM == 0 causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,
+TP-021,Section 8.1 – Drop,PAYLOAD_LEN == 0 causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,PAYLOAD_LEN outside 1-255
+TP-022,Section 8.1 – Drop,PAYLOAD_LEN > 255 is invalid (cfg field is 8-bit so wrap-around not possible; test PAYLOAD_LEN=0),drop_conditions_test,drop_cnt increments; no output,Medium,
+TP-023,Section 8.1 – Drop,Reserved bits [7:1] non-zero causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,
+TP-024,Section 8.1 – Drop,Reserved bits [23:21] non-zero causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,
+TP-025,Section 8.1 – Drop,Reserved bits [31:29] non-zero causes silent drop,drop_conditions_test,drop_cnt increments by 1; no output produced,High,
+TP-026,Section 8.1 – Drop,Fragment with mismatched SEQ_NUM while packet being accumulated causes drop,drop_conditions_test,Buffered packet dropped; drop_cnt increments once per dropped packet,High,
+TP-027,Section 8.1 – Drop,FRAG_NUM=1 arriving while a different SEQ_NUM packet is incomplete causes drop,drop_conditions_test,Previous packet dropped; drop_cnt increments; new packet may start,High,
+TP-028,Section 8.1 – Drop,Missing fragment (gap in FRAG_NUM sequence) causes drop,drop_conditions_test,drop_cnt increments; no remote output for that packet,High,
+TP-029,Section 8.2 – Drop Counter,drop_cnt increments by exactly 1 per dropped packet regardless of fragment count,drop_conditions_test,Counter value matches expected number of dropped packets,High,
+TP-030,Section 8.2 – Drop Counter,drop_cnt wraps around at 2^16 (modulo-65536),drop_conditions_test,Counter wraps from 0xFFFF to 0x0000 correctly,Medium,Send 65537 invalid packets
+TP-031,Section 8.2 – Drop Counter,drop_cnt not affected by successful transmissions,local_basic_test / remote_basic_test,drop_cnt stays 0 after successful packets,High,
+TP-032,Section 9 – Reset,Reset deasserts all valid outputs (local_vld=0 remote_vld=0),local_basic_test / remote_basic_test,Outputs deasserted during rst_n=0,High,
+TP-033,Section 9 – Reset,Reset clears drop_cnt to zero,drop_conditions_test,drop_cnt=0 immediately after reset,High,
+TP-034,Section 9 – Reset,Reset discards any packet in progress,remote_basic_test,Partial remote packet discarded on reset; no output produced,High,
+TP-035,Section 9 – Reset,Normal operation resumes after reset deassertion,local_basic_test,Packets transfer correctly after rst_n goes high,High,
+TP-036,Mixed Scenarios,Interleaved local and remote packets,rand_test,Both routed correctly; no cross-contamination,High,
+TP-037,Mixed Scenarios,Random mix of valid and invalid packets,rand_test,drop_cnt matches expected count; valid packets output correctly,High,
+TP-038,Coverage,Achieve >90% code coverage,rand_test,Coverage report shows >90% line/branch coverage,High,
+TP-039,Coverage,Achieve >90% functional coverage across all covergroups,rand_test,Coverage report shows >90% functional coverage,High,
