@@ -1,9 +1,9 @@
 // ============================================================
-// bird_packet — UVM sequence item
+// bird_transaction — UVM sequence item
 // Represents one BIRD fragment (one cfg word + payload bytes)
 // ============================================================
-class bird_packet extends uvm_sequence_item;
-    `uvm_object_utils(bird_packet)
+class bird_transaction extends uvm_sequence_item;
+    `uvm_object_utils(bird_transaction)
 
     // ---- cfg field breakdown --------------------------------
     rand bit         traffic_type;   // cfg[0]   0=local, 1=remote
@@ -91,14 +91,14 @@ class bird_packet extends uvm_sequence_item;
     endfunction
 
     // ---- UVM standard overrides -----------------------------
-    function new(string name = "bird_packet");
+    function new(string name = "bird_transaction");
         super.new(name);
     endfunction
 
     function void do_copy(uvm_object rhs);
-        bird_packet rhs_;
+        bird_transaction rhs_;
         if (!$cast(rhs_, rhs))
-            `uvm_fatal("bird_packet", "do_copy: type mismatch")
+            `uvm_fatal("bird_transaction", "do_copy: type mismatch")
         super.do_copy(rhs);
         traffic_type = rhs_.traffic_type;
         payload_len  = rhs_.payload_len;
@@ -112,7 +112,7 @@ class bird_packet extends uvm_sequence_item;
     endfunction
 
     function bit do_compare(uvm_object rhs, uvm_comparer comparer);
-        bird_packet rhs_;
+        bird_transaction rhs_;
         bit eq;
         if (!$cast(rhs_, rhs)) return 0;
         eq = super.do_compare(rhs, comparer);
@@ -130,7 +130,7 @@ class bird_packet extends uvm_sequence_item;
     function string convert2string();
         string s;
         s = $sformatf(
-            "bird_packet: type=%0s len=%0d frag=%0d seq=%0d crc=0x%04h rsvd[7:1]=%0h rsvd[23:21]=%0h rsvd[31:29]=%0h",
+            "bird_transaction: type=%0s len=%0d frag=%0d seq=%0d crc=0x%04h rsvd[7:1]=%0h rsvd[23:21]=%0h rsvd[31:29]=%0h",
             (traffic_type ? "REMOTE" : "LOCAL"),
             payload_len, frag_num, seq_num, crc16,
             rsvd_7_1, rsvd_23_21, rsvd_31_29);
@@ -143,4 +143,4 @@ class bird_packet extends uvm_sequence_item;
         return s;
     endfunction
 
-endclass : bird_packet
+endclass : bird_transaction

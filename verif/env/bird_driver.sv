@@ -1,5 +1,5 @@
 // ============================================================
-// bird_driver — drives bird_packet items onto the DUT interface
+// bird_driver — drives bird_transaction items onto the DUT interface
 //
 // Protocol:
 //   - Assert cfg stable for the entire fragment transfer
@@ -7,7 +7,7 @@
 //   - Stream payload bytes then CRC MSB, CRC LSB
 //   - Handle backpressure: hold signals stable when in_rdy=0
 // ============================================================
-class bird_driver extends uvm_driver #(bird_packet);
+class bird_driver extends uvm_driver #(bird_transaction);
     `uvm_component_utils(bird_driver)
 
     virtual bird_if.driver_mp vif;
@@ -24,7 +24,7 @@ class bird_driver extends uvm_driver #(bird_packet);
     endfunction
 
     task run_phase(uvm_phase phase);
-        bird_packet pkt;
+        bird_transaction pkt;
         // Idle state
         vif.driver_cb.in_vld    <= 1'b0;
         vif.driver_cb.data_in   <= 8'h00;
@@ -45,7 +45,7 @@ class bird_driver extends uvm_driver #(bird_packet);
     endtask
 
     // Drive one complete fragment (payload + CRC)
-    task drive_packet(bird_packet pkt);
+    task drive_packet(bird_transaction pkt);
         logic [31:0] cfg_val;
         byte unsigned stream[];
         int stream_len;

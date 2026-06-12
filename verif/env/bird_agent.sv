@@ -13,7 +13,7 @@ class bird_agent extends uvm_agent;
     bird_in_monitor  in_monitor;
 
     // Analysis port forwarded from in_monitor
-    uvm_analysis_port #(bird_packet) ap;
+    uvm_analysis_port #(bird_transaction) ap;
 
     // Agent active/passive mode (UVM_ACTIVE = drive + monitor)
     // uvm_active_passive_enum is_active = UVM_ACTIVE; // inherited

@@ -13,7 +13,7 @@ class bird_scoreboard extends uvm_scoreboard;
     `uvm_component_utils(bird_scoreboard)
 
     // Analysis imp ports
-    uvm_analysis_imp_input  #(bird_packet,      bird_scoreboard) input_imp;
+    uvm_analysis_imp_input  #(bird_transaction,      bird_scoreboard) input_imp;
     uvm_analysis_imp_local  #(bird_output_txn,  bird_scoreboard) local_imp;
     uvm_analysis_imp_remote #(bird_output_txn,  bird_scoreboard) remote_imp;
 
@@ -66,7 +66,7 @@ class bird_scoreboard extends uvm_scoreboard;
     // write_input - called by bird_in_monitor analysis port
     // Builds expected outputs using the reference model
     // -------------------------------------------------------------------------
-    function void write_input(bird_packet pkt);
+    function void write_input(bird_transaction pkt);
         bit drop = 0;
 
         `uvm_info("bird_scoreboard",
@@ -122,7 +122,7 @@ class bird_scoreboard extends uvm_scoreboard;
     endfunction
 
     // Build expected local output
-    function void model_local(bird_packet pkt);
+    function void model_local(bird_transaction pkt);
         byte unsigned exp[];
         int idx;
 
@@ -142,7 +142,7 @@ class bird_scoreboard extends uvm_scoreboard;
     endfunction
 
     // Accumulate remote fragments and assemble when complete
-    function void model_remote(bird_packet pkt);
+    function void model_remote(bird_transaction pkt);
         int sn = int'(pkt.seq_num);
         int fn = int'(pkt.frag_num);
         byte unsigned merged[];
@@ -218,7 +218,7 @@ class bird_scoreboard extends uvm_scoreboard;
                 end
 
                 // Recalculate CRC16 over merged payload
-                new_crc = bird_packet::calc_crc16(merged);
+                new_crc = bird_transaction::calc_crc16(merged);
 
                 // Append CRC (MSB first) to the merged byte stream before packing
                 begin

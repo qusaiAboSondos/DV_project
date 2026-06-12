@@ -4,12 +4,12 @@
 `ifndef BIRD_COVERAGE_SV
 `define BIRD_COVERAGE_SV
 
-class bird_coverage extends uvm_subscriber #(bird_packet);
+class bird_coverage extends uvm_subscriber #(bird_transaction);
     `uvm_component_utils(bird_coverage)
 
     virtual bird_if.monitor_mp vif;
 
-    bird_packet current_pkt;
+    bird_transaction current_pkt;
 
     // -------------------------------------------------------------------------
     // Covergroup: traffic type
@@ -129,7 +129,7 @@ class bird_coverage extends uvm_subscriber #(bird_packet);
     endfunction
 
     // Called by uvm_subscriber when analysis port fires
-    function void write(bird_packet t);
+    function void write(bird_transaction t);
         current_pkt = t;
         cg_traffic_type.sample();
         cg_payload_len.sample();
