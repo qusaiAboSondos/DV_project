@@ -47,9 +47,12 @@ class bird_transaction extends uvm_sequence_item;
         payload.size() == payload_len;
     }
 
-    // Local traffic: frag_num must be 1
+    // Local traffic: seq_num must be 1 AND frag_num must be 1
     constraint c_local_frag {
-        (traffic_type == 0) -> frag_num == 5'h1;
+        if (traffic_type == 0) {
+            seq_num == 5'h1;
+            frag_num == 5'h1;
+        }
     }
 
     // ---- post_randomize: compute CRC ------------------------

@@ -102,9 +102,9 @@ class bird_scoreboard extends uvm_scoreboard;
             drop = 1;
         end
 
-        // Local traffic: FRAG_NUM must be 1, else drop
-        if (!drop && pkt.traffic_type == 0 && pkt.frag_num != 1) begin
-            `uvm_info("bird_scoreboard", "Drop: LOCAL packet with FRAG_NUM != 1", UVM_MEDIUM)
+        // Local traffic: SEQ_NUM must be 1 AND FRAG_NUM must be 1, else drop
+        if (!drop && pkt.traffic_type == 0 && (pkt.seq_num != 1 || pkt.frag_num != 1)) begin
+            `uvm_info("bird_scoreboard", "Drop: LOCAL packet with SEQ_NUM != 1 or FRAG_NUM != 1", UVM_MEDIUM)
             expected_drop_cnt++;
             drop = 1;
         end
@@ -220,34 +220,31 @@ class bird_scoreboard extends uvm_scoreboard;
                 // Recalculate CRC16 over merged payload
                 new_crc = bird_transaction::calc_crc16(merged);
 
-                // Append CRC (MSB first) to the merged byte stream before packing
+                // Pack merged payload bytes little-endian into 32-bit words,
+                // then append {16'h0000, crc16} as the final word
                 begin
-                    byte unsigned merged_with_crc[];
                     int n;
                     int full_words;
                     int rem;
-                    merged_with_crc = new[merged.size() + 2];
-                    foreach (merged[i]) merged_with_crc[i] = merged[i];
-                    merged_with_crc[merged.size()]   = new_crc[15:8];
-                    merged_with_crc[merged.size()+1] = new_crc[7:0];
-
-                    // Pack into 32-bit words (big-endian, pad last word with zeros)
+                    // Pack payload bytes little-endian (byte 0 → bits [7:0], etc.)
                     words.delete();
-                    n = merged_with_crc.size();
+                    n = merged.size();
                     full_words = n / 4;
                     rem = n % 4;
                     for (int w = 0; w < full_words; w++) begin
                         logic [31:0] word;
-                        word = {merged_with_crc[w*4],   merged_with_crc[w*4+1],
-                                merged_with_crc[w*4+2], merged_with_crc[w*4+3]};
+                        word = {merged[w*4+3], merged[w*4+2],
+                                merged[w*4+1], merged[w*4]};
                         words.push_back(word);
                     end
                     if (rem > 0) begin
                         logic [31:0] last_word = 32'h0;
                         for (int b = 0; b < rem; b++)
-                            last_word[31 - b*8 -: 8] = merged_with_crc[full_words*4 + b];
+                            last_word[8*b +: 8] = merged[full_words*4 + b];
                         words.push_back(last_word);
                     end
+                    // Final word: {16'h0000, crc16}
+                    words.push_back({16'h0000, new_crc});
                 end
 
                 expected_remote.push_back(words);

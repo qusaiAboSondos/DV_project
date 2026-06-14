@@ -17,6 +17,7 @@ class local_basic_seq extends bird_base_seq;
         start_item(pkt);
         if (!pkt.randomize() with {
             traffic_type == 0;
+            seq_num      == 1;
             payload_len  inside {[1:64]};
         })
             `uvm_fatal("local_basic_seq", "Randomisation failed")
@@ -41,7 +42,7 @@ class local_multi_seq extends bird_base_seq;
         repeat (num_pkts) begin
             pkt = bird_transaction::type_id::create("pkt");
             start_item(pkt);
-            if (!pkt.randomize() with { traffic_type == 0; })
+            if (!pkt.randomize() with { traffic_type == 0; seq_num == 1; })
                 `uvm_fatal("local_multi_seq", "Randomisation failed")
             finish_item(pkt);
         end

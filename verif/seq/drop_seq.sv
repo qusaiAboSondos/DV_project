@@ -75,6 +75,38 @@ class drop_reserved_bits_seq extends bird_base_seq;
 endclass : drop_reserved_bits_seq
 
 // ------------------------------------------------------------
+// drop_local_seq_num_not_one_seq — LOCAL with seq_num != 1 → drop
+// In the behavioral model, LOCAL traffic is valid only when
+// both seq_num==1 AND frag_num==1.  Sending seq_num=2 with
+// frag_num=1 must be treated as a drop condition.
+// ------------------------------------------------------------
+class drop_local_seq_num_not_one_seq extends bird_base_seq;
+    `uvm_object_utils(drop_local_seq_num_not_one_seq)
+
+    function new(string name = "drop_local_seq_num_not_one_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        bird_transaction pkt = bird_transaction::type_id::create("pkt");
+        start_item(pkt);
+        // Disable the local_frag constraint so seq_num != 1 is allowed
+        pkt.c_local_frag.constraint_mode(0);
+        if (!pkt.randomize() with {
+            traffic_type == 0;   // LOCAL traffic
+            seq_num      == 2;   // seq_num != 1 → drop condition
+            frag_num     == 1;   // frag_num still 1 (only seq_num violates)
+            payload_len  inside {[1:32]};
+        })
+            `uvm_fatal("drop_local_seq_num_not_one_seq", "Randomisation failed")
+        pkt.crc16 = bird_transaction::calc_crc16(pkt.payload);
+        finish_item(pkt);
+        `uvm_info("drop_local_seq_num_not_one_seq",
+            "Sent LOCAL packet with seq_num=2, frag_num=1 (expect drop)", UVM_LOW)
+    endtask
+endclass : drop_local_seq_num_not_one_seq
+
+// ------------------------------------------------------------
 // drop_mismatch_seq_num_seq — second frag has different SEQ_NUM
 // ------------------------------------------------------------
 class drop_mismatch_seq_num_seq extends bird_base_seq;
