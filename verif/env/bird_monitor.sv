@@ -77,12 +77,12 @@ class bird_in_monitor extends uvm_monitor;
 
         // Collect byte stream (payload_len + 2 CRC bytes)
         // First byte already visible on this cycle
-        stream.push_back(byte unsigned'(vif.monitor_cb.data_in));
+        stream.push_back(8'(vif.monitor_cb.data_in));
         @(vif.monitor_cb);
 
         while (stream.size() < total_bytes) begin
             if (vif.monitor_cb.in_vld === 1'b1 && vif.monitor_cb.in_rdy === 1'b1) begin
-                stream.push_back(byte unsigned'(vif.monitor_cb.data_in));
+                stream.push_back(8'(vif.monitor_cb.data_in));
             end
             if (stream.size() < total_bytes)
                 @(vif.monitor_cb);
@@ -185,14 +185,14 @@ class bird_out_monitor extends uvm_monitor;
                 vif.monitor_cb.local_rdy === 1'b1) begin
                 txn = bird_output_txn::type_id::create("local_txn");
                 txn.txn_type = bird_output_txn::LOCAL_TXN;
-                txn.local_data.push_back(byte unsigned'(vif.monitor_cb.data_local));
+                txn.local_data.push_back(8'(vif.monitor_cb.data_local));
                 txn.drop_cnt_val = vif.monitor_cb.drop_cnt;
 
                 // Continue collecting while local_vld stays high
                 @(vif.monitor_cb);
                 while (vif.monitor_cb.local_vld === 1'b1) begin
                     if (vif.monitor_cb.local_rdy === 1'b1)
-                        txn.local_data.push_back(byte unsigned'(vif.monitor_cb.data_local));
+                        txn.local_data.push_back(8'(vif.monitor_cb.data_local));
                     @(vif.monitor_cb);
                 end
 
