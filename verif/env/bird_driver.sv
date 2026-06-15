@@ -19,7 +19,7 @@ class bird_driver extends uvm_driver #(bird_transaction);
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         if (!uvm_config_db #(virtual bird_if.driver_mp)::get(
-                this, "", "vif", vif))
+                this, "", "driver_mp", vif))
             `uvm_fatal("bird_driver", "Cannot get virtual interface")
     endfunction
 

@@ -33,7 +33,7 @@ class bird_checker extends uvm_component;
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         if (!uvm_config_db #(virtual bird_if.monitor_mp)::get(
-                this, "", "monitor_mp", vif))
+                this, "", "vif", vif))
             `uvm_fatal("BIRD_CHECKER", "Cannot get monitor_mp from config_db")
     endfunction
 

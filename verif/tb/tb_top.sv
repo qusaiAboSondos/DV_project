@@ -62,9 +62,9 @@ module tb_top;
     // UVM interface registration in config_db
     // -------------------------------------------------------------------------
     initial begin
-        // Register driver_mp modport for driver and base_test
+        // Register driver_mp modport for driver
         uvm_config_db #(virtual bird_if.driver_mp)::set(
-            null, "uvm_test_top.*", "vif", dut_if.driver_mp);
+            null, "uvm_test_top.*", "driver_mp", dut_if.driver_mp);
 
         // Register monitor_mp modport for monitors and coverage
         uvm_config_db #(virtual bird_if.monitor_mp)::set(

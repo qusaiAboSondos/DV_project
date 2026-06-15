@@ -15,22 +15,21 @@ class remote_inorder_seq extends bird_base_seq;
 
     task body();
         bird_transaction pkt;
-        bit [4:0] seq = $urandom_range(1, 31);
-
+        // seq_num = fragment index (1..num_frags), frag_num = total fragments (constant)
         for (int f = 1; f <= num_frags; f++) begin
             pkt = bird_transaction::type_id::create($sformatf("pkt_f%0d", f));
             start_item(pkt);
             if (!pkt.randomize() with {
                 traffic_type == 1;
-                seq_num      == seq;
-                frag_num     == f;
+                seq_num      == f;           // fragment index
+                frag_num     == num_frags;   // total fragment count
                 payload_len  inside {[4:32]};
             })
                 `uvm_fatal("remote_inorder_seq", "Randomisation failed")
             finish_item(pkt);
         end
         `uvm_info("remote_inorder_seq",
-            $sformatf("Sent %0d in-order remote frags seq=%0d", num_frags, seq), UVM_LOW)
+            $sformatf("Sent %0d in-order remote frags total=%0d", num_frags, num_frags), UVM_LOW)
     endtask
 endclass : remote_inorder_seq
 
