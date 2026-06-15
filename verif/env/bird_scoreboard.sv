@@ -366,16 +366,7 @@ class bird_scoreboard extends uvm_scoreboard;
 
     function void report_phase(uvm_phase phase);
         super.report_phase(phase);
-        `uvm_info("bird_scoreboard", $sformatf(
-            "\n====================================================\n"
-            "  SCOREBOARD SUMMARY\n"
-            "  Checks PASSED : %0d\n"
-            "  Checks FAILED : %0d\n"
-            "  Expected Drops: %0d\n"
-            "  Observed Drops: %0d\n"
-            "====================================================",
-            checks_passed, checks_failed,
-            expected_drop_cnt, observed_drop_cnt), UVM_NONE)
+        `uvm_info("bird_scoreboard", $sformatf("\n====================================================\n  SCOREBOARD SUMMARY\n  Checks PASSED : %0d\n  Checks FAILED : %0d\n  Expected Drops: %0d\n  Observed Drops: %0d\n====================================================", checks_passed, checks_failed, expected_drop_cnt, observed_drop_cnt), UVM_NONE)
 
         if (checks_failed == 0)
             `uvm_info("bird_scoreboard", "*** TEST PASSED ***", UVM_NONE)

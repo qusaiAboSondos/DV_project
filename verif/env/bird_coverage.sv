@@ -157,24 +157,7 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
 
     function void report_phase(uvm_phase phase);
         super.report_phase(phase);
-        `uvm_info("bird_coverage", $sformatf(
-            "\n====================================================\n"
-            "  COVERAGE SUMMARY\n"
-            "  cg_traffic_type   : %0.1f%%\n"
-            "  cg_payload_len    : %0.1f%%\n"
-            "  cg_frag_num       : %0.1f%%\n"
-            "  cg_seq_num        : %0.1f%%\n"
-            "  cg_drop_conditions: %0.1f%%\n"
-            "  cg_backpressure   : %0.1f%%\n"
-            "  cg_cross          : %0.1f%%\n"
-            "====================================================",
-            cg_traffic_type.get_coverage(),
-            cg_payload_len.get_coverage(),
-            cg_frag_num.get_coverage(),
-            cg_seq_num.get_coverage(),
-            cg_drop_conditions.get_coverage(),
-            cg_backpressure.get_coverage(),
-            cg_cross.get_coverage()), UVM_NONE)
+        `uvm_info("bird_coverage", $sformatf("\n====================================================\n  COVERAGE SUMMARY\n  cg_traffic_type   : %0.1f%%\n  cg_payload_len    : %0.1f%%\n  cg_frag_num       : %0.1f%%\n  cg_seq_num        : %0.1f%%\n  cg_drop_conditions: %0.1f%%\n  cg_backpressure   : %0.1f%%\n  cg_cross          : %0.1f%%\n====================================================", cg_traffic_type.get_coverage(), cg_payload_len.get_coverage(), cg_frag_num.get_coverage(), cg_seq_num.get_coverage(), cg_drop_conditions.get_coverage(), cg_backpressure.get_coverage(), cg_cross.get_coverage()), UVM_NONE)
     endfunction
 
 endclass : bird_coverage
