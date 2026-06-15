@@ -15,21 +15,22 @@ class remote_inorder_seq extends bird_base_seq;
 
     task body();
         bird_transaction pkt;
-        // seq_num = fragment index (1..num_frags), frag_num = total fragments (constant)
+        // DUT protocol: seq_num = fragment position (1..N), frag_num = total count (N)
+        // All fragments share the same frag_num (total), seq_num identifies position
         for (int f = 1; f <= num_frags; f++) begin
             pkt = bird_transaction::type_id::create($sformatf("pkt_f%0d", f));
             start_item(pkt);
             if (!pkt.randomize() with {
                 traffic_type == 1;
-                seq_num      == f;           // fragment index
-                frag_num     == num_frags;   // total fragment count
+                seq_num      == f;           // position: 1,2,...,N
+                frag_num     == num_frags;   // total count N (fixed for all frags)
                 payload_len  inside {[4:32]};
             })
                 `uvm_fatal("remote_inorder_seq", "Randomisation failed")
             finish_item(pkt);
         end
         `uvm_info("remote_inorder_seq",
-            $sformatf("Sent %0d in-order remote frags total=%0d", num_frags, num_frags), UVM_LOW)
+            $sformatf("Sent %0d in-order remote frags (seq=pos, frag=total)", num_frags), UVM_LOW)
     endtask
 endclass : remote_inorder_seq
 
@@ -46,51 +47,36 @@ class remote_outoforder_seq extends bird_base_seq;
 
     task body();
         bird_transaction pkt;
-        bit [4:0] seq = $urandom_range(1, 31);
         int order[];
 
-        // Build shuffled order of frags 2..num_frags (frag 1 must go first per spec:
-        // FRAG_NUM==1 while previous incomplete is a drop condition, so frag 1
-        // always initiates the assembly).
-        order = new[num_frags - 1];
-        foreach (order[i]) order[i] = i + 2;  // 2, 3, ..., num_frags
-        // Fisher-Yates shuffle of frags 2..num_frags
-        for (int i = num_frags - 2; i > 0; i--) begin
+        // DUT protocol: seq_num = position (1..N), frag_num = total (N)
+        // Build shuffled order of ALL positions 1..num_frags
+        order = new[num_frags];
+        foreach (order[i]) order[i] = i + 1;  // 1, 2, ..., num_frags
+        // Fisher-Yates shuffle
+        for (int i = num_frags - 1; i > 0; i--) begin
             int j = $urandom_range(0, i);
             int tmp = order[i];
             order[i] = order[j];
             order[j] = tmp;
         end
 
-        // Always send frag 1 first to initiate assembly
-        pkt = bird_transaction::type_id::create("pkt_f1");
-        start_item(pkt);
-        if (!pkt.randomize() with {
-            traffic_type == 1;
-            seq_num      == seq;
-            frag_num     == 1;
-            payload_len  inside {[4:32]};
-        })
-            `uvm_fatal("remote_outoforder_seq", "Randomisation failed for frag 1")
-        finish_item(pkt);
-
-        // Send remaining fragments in shuffled order
+        // Send all fragments in shuffled order
         foreach (order[i]) begin
-            pkt = bird_transaction::type_id::create(
-                $sformatf("pkt_f%0d", order[i]));
+            pkt = bird_transaction::type_id::create($sformatf("pkt_pos%0d", order[i]));
             start_item(pkt);
             if (!pkt.randomize() with {
                 traffic_type == 1;
-                seq_num      == seq;
-                frag_num     == order[i];
+                seq_num      == order[i];    // position (shuffled)
+                frag_num     == num_frags;   // total count (fixed)
                 payload_len  inside {[4:32]};
             })
                 `uvm_fatal("remote_outoforder_seq", "Randomisation failed")
             finish_item(pkt);
         end
         `uvm_info("remote_outoforder_seq",
-            $sformatf("Sent %0d out-of-order remote frags seq=%0d (frag1 first, rest shuffled)",
-                num_frags, seq), UVM_LOW)
+            $sformatf("Sent %0d out-of-order remote frags (seq=shuffled pos, frag=total=%0d)",
+                num_frags, num_frags), UVM_LOW)
     endtask
 endclass : remote_outoforder_seq
 
@@ -109,7 +95,8 @@ class remote_single_frag_seq extends bird_base_seq;
         start_item(pkt);
         if (!pkt.randomize() with {
             traffic_type == 1;
-            frag_num     == 1;
+            seq_num      == 1;   // position 1 of 1
+            frag_num     == 1;   // total = 1
             payload_len  inside {[1:64]};
         })
             `uvm_fatal("remote_single_frag_seq", "Randomisation failed")

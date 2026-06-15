@@ -25,14 +25,13 @@ class bird_scoreboard extends uvm_scoreboard;
     // Each entry = byte array (payload + CRC)
     byte unsigned expected_local[$][$];
 
-    // Remote fragment accumulation: keyed by seq_num
-    // Each entry: assoc array of frag_num → payload bytes
-    byte unsigned remote_frags[int][int][];   // [seq_num][frag_num][bytes]
-    int           remote_max_frag[int];       // max frag_num seen per seq_num
-
-    // Track which seq_num is currently being assembled (DUT has one assembly buffer)
-    // -1 means idle
-    int           active_seq_num;             // seq_num of in-flight remote assembly
+    // Remote fragment accumulation:
+    // DUT uses seq_num as fragment POSITION (1..N) and frag_num as TOTAL count.
+    // frag_payload_by_pos[pos] holds payload bytes for that position.
+    byte unsigned frag_payload_by_pos[int][];  // [position(seq_num)] -> bytes
+    bit           frag_seen_pos[int];          // which positions received
+    int           remote_max_frag;             // max(frag_num, seq_num) seen so far
+    bit           remote_active;               // currently accumulating
 
     // Queue of expected remote output words
     logic [31:0]  expected_remote[$][$];
@@ -59,7 +58,8 @@ class bird_scoreboard extends uvm_scoreboard;
         observed_drop_cnt = 0;
         checks_passed     = 0;
         checks_failed     = 0;
-        active_seq_num    = -1;
+        remote_max_frag   = 0;
+        remote_active     = 0;
     endfunction
 
     // -------------------------------------------------------------------------
@@ -141,97 +141,74 @@ class bird_scoreboard extends uvm_scoreboard;
             $sformatf("Model: enqueued local txn, %0d bytes", exp.size()), UVM_HIGH)
     endfunction
 
-    // Accumulate remote fragments and assemble when complete
+    // Accumulate remote fragments and assemble when complete.
+    // DUT uses seq_num as fragment POSITION and frag_num as TOTAL count.
+    // Drop condition: seq_num > frag_num (position exceeds total).
     function void model_remote(bird_transaction pkt);
-        int sn = int'(pkt.seq_num);
-        int fn = int'(pkt.frag_num);
+        int pos   = int'(pkt.seq_num);   // fragment position (1..N)
+        int total = int'(pkt.frag_num);  // total fragment count (N)
         byte unsigned merged[];
         logic [31:0] words[$];
         int total_bytes;
         int word_idx;
         logic [15:0] new_crc;
 
-        // --- Mismatched SEQ_NUM detection ---
-        // The DUT maintains ONE active assembly. If a fragment arrives with a
-        // seq_num that differs from the active assembly's seq_num, it is dropped.
-        // Additionally, the in-flight assembly is flushed (also counted as dropped).
-        if (active_seq_num == -1) begin
-            // No active assembly — this fragment starts a new one
-            active_seq_num = sn;
-        end else if (active_seq_num != sn) begin
-            // Mismatch: new fragment's seq_num differs from in-flight.
-            // The DUT drops the incoming fragment and flushes the in-flight assembly.
+        // Drop if position > total (DUT condition: rx_seq > rx_frag)
+        if (pos > total) begin
             `uvm_info("bird_scoreboard",
-                $sformatf("Drop: mismatched SEQ_NUM in-flight=%0d incoming=%0d",
-                    active_seq_num, sn), UVM_MEDIUM)
-            // Drop the incoming fragment
+                $sformatf("Drop: seq_num(%0d) > frag_num(%0d)", pos, total), UVM_MEDIUM)
             expected_drop_cnt++;
-            // Flush (drop) the in-flight assembly
-            remote_frags.delete(active_seq_num);
-            remote_max_frag.delete(active_seq_num);
-            active_seq_num = -1;
-            return;
-        end else if (fn == 1 && remote_frags.exists(sn) && remote_frags[sn].exists(1)) begin
-            // frag_num=1 arrived again while a previous assembly (which already has frag 1)
-            // is still incomplete — this restarts the assembly but the spec treats it as drop
-            `uvm_info("bird_scoreboard",
-                "Drop: FRAG_NUM=1 while previous assembly incomplete (duplicate frag 1)", UVM_MEDIUM)
-            expected_drop_cnt++;
-            // Flush the incomplete in-flight assembly
-            remote_frags.delete(sn);
-            remote_max_frag.delete(sn);
-            active_seq_num = -1;
+            if (remote_active) begin
+                // Flush in-flight assembly and count as drop
+                expected_drop_cnt++;
+                frag_payload_by_pos.delete();
+                frag_seen_pos.delete();
+                remote_max_frag = 0;
+                remote_active   = 0;
+            end
             return;
         end
 
-        // Store fragment
-        remote_frags[sn][fn] = new[pkt.payload.size()](pkt.payload);
+        // Start assembly if not active
+        if (!remote_active) remote_active = 1;
 
-        // Track max frag_num for this seq_num
-        if (!remote_max_frag.exists(sn) || fn > remote_max_frag[sn])
-            remote_max_frag[sn] = fn;
+        // Store fragment payload at its position
+        frag_payload_by_pos[pos] = new[pkt.payload.size()](pkt.payload);
+        frag_seen_pos[pos]       = 1;
 
-        // Check if we have all fragments 1..max_frag_num
-        // We assume max_frag_num is the highest frag_num received
-        // (simplified model: when all frags 1..N received, assemble)
+        // Update max seen: max(total, pos)
+        if (total > remote_max_frag) remote_max_frag = total;
+        if (pos   > remote_max_frag) remote_max_frag = pos;
+
+        // Check completion: all positions 1..remote_max_frag received
         begin
             bit complete = 1;
-            for (int f = 1; f <= remote_max_frag[sn]; f++) begin
-                if (!remote_frags[sn].exists(f)) begin
-                    complete = 0;
-                    break;
-                end
+            for (int f = 1; f <= remote_max_frag; f++) begin
+                if (!frag_seen_pos.exists(f)) begin complete = 0; break; end
             end
 
-            if (complete && remote_max_frag[sn] >= 1) begin
-                // Merge payloads in fragment order
+            if (complete && remote_max_frag >= 1) begin
+                // Merge payloads in position order (1..N)
                 total_bytes = 0;
-                for (int f = 1; f <= remote_max_frag[sn]; f++)
-                    total_bytes += remote_frags[sn][f].size();
+                for (int f = 1; f <= remote_max_frag; f++)
+                    total_bytes += frag_payload_by_pos[f].size();
 
-                merged = new[total_bytes];
-                word_idx = 0;
-                for (int f = 1; f <= remote_max_frag[sn]; f++) begin
-                    foreach (remote_frags[sn][f][b]) begin
-                        merged[word_idx++] = remote_frags[sn][f][b];
-                    end
-                end
+                merged    = new[total_bytes];
+                word_idx  = 0;
+                for (int f = 1; f <= remote_max_frag; f++)
+                    foreach (frag_payload_by_pos[f][b])
+                        merged[word_idx++] = frag_payload_by_pos[f][b];
 
-                // Recalculate CRC16 over merged payload
+                // Recompute CRC16 over merged payload
                 new_crc = bird_transaction::calc_crc16(merged);
 
-                // Pack merged payload bytes little-endian into 32-bit words,
-                // then append {16'h0000, crc16} as the final word
+                // Pack little-endian into 32-bit words, final word = {16'h0000, crc}
+                words.delete();
                 begin
-                    int n;
-                    int full_words;
-                    int rem;
-                    // Pack payload bytes little-endian (byte 0 → bits [7:0], etc.)
-                    words.delete();
-                    n = merged.size();
-                    full_words = n / 4;
-                    rem = n % 4;
-                    for (int w = 0; w < full_words; w++) begin
+                    int n         = merged.size();
+                    int full_wrds = n / 4;
+                    int rem       = n % 4;
+                    for (int w = 0; w < full_wrds; w++) begin
                         logic [31:0] word;
                         word = {merged[w*4+3], merged[w*4+2],
                                 merged[w*4+1], merged[w*4]};
@@ -240,23 +217,23 @@ class bird_scoreboard extends uvm_scoreboard;
                     if (rem > 0) begin
                         logic [31:0] last_word = 32'h0;
                         for (int b = 0; b < rem; b++)
-                            last_word[8*b +: 8] = merged[full_words*4 + b];
+                            last_word[8*b +: 8] = merged[full_wrds*4 + b];
                         words.push_back(last_word);
                     end
-                    // Final word: {16'h0000, crc16}
                     words.push_back({16'h0000, new_crc});
                 end
 
                 expected_remote.push_back(words);
 
                 `uvm_info("bird_scoreboard",
-                    $sformatf("Model: assembled remote packet seq=%0d, %0d frags, %0d merged bytes",
-                        sn, remote_max_frag[sn], total_bytes), UVM_MEDIUM)
+                    $sformatf("Model: assembled remote packet, %0d positions, %0d merged bytes",
+                        remote_max_frag, total_bytes), UVM_MEDIUM)
 
-                // Clean up accumulated state
-                remote_frags.delete(sn);
-                remote_max_frag.delete(sn);
-                active_seq_num = -1;  // ready for next remote assembly
+                // Reset assembly state
+                frag_payload_by_pos.delete();
+                frag_seen_pos.delete();
+                remote_max_frag = 0;
+                remote_active   = 0;
             end
         end
     endfunction
