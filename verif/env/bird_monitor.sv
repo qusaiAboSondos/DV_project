@@ -209,9 +209,11 @@ class bird_out_monitor extends uvm_monitor;
                 vif.monitor_cb.remote_rdy === 1'b1) begin
                 txn = bird_output_txn::type_id::create("remote_txn");
                 txn.txn_type = bird_output_txn::REMOTE_TXN;
-                txn.remote_data.push_back(vif.monitor_cb.data_remote);
                 txn.drop_cnt_val = vif.monitor_cb.drop_cnt;
 
+                // DUT uses NB for data_remote (computed before pop), so word[0]
+                // is visible for two consecutive clocks.  Advance one clock first
+                // so the while loop sees word[0] exactly once.
                 @(vif.monitor_cb);
                 while (vif.monitor_cb.remote_vld === 1'b1) begin
                     if (vif.monitor_cb.remote_rdy === 1'b1)
