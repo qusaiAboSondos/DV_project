@@ -17,6 +17,7 @@
 
 ### Running Simulation 
 git pull
+
 make compile
 make sim_remote
 make sim_remote_ooo
