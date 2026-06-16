@@ -87,15 +87,8 @@ module tb_top;
     // -------------------------------------------------------------------------
     initial begin
         if ($test$plusargs("WAVES")) begin
-            `ifdef VCS
-                $vcdplusfile("bird_tb.vpd");
-                $vcdpluson(0, tb_top);
-            `elsif QUESTA
-                $wlfdumpvars(0, tb_top);
-            `else
-                $dumpfile("bird_tb.vcd");
-                $dumpvars(0, tb_top);
-            `endif
+            $dumpfile("bird_tb.vcd");
+            $dumpvars(0, tb_top);
         end
     end
 
