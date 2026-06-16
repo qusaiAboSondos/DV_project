@@ -4,7 +4,8 @@ VCSFLAGS := -sverilog -ntb_opts uvm-1.2 -timescale=1ns/1ps \
             +incdir+verif/tb \
             -l compile.log
 
-SRCS := verif/cfg/bird_pkg.sv \
+SRCS := verif/if/bird_if.sv \
+        verif/cfg/bird_pkg.sv \
         verif/tb/tb_top.sv \
         design/bird.sv
 
