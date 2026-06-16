@@ -309,6 +309,11 @@ class bird_scoreboard extends uvm_scoreboard;
             `uvm_error("bird_scoreboard",
                 $sformatf("Remote word count mismatch: got %0d, expected %0d",
                     txn.remote_data.size(), exp_words.size()))
+            // Print all received words so we can compare
+            foreach (txn.remote_data[i])
+                `uvm_info("bird_scoreboard", $sformatf("  DUT  word[%02d] = 0x%08h", i, txn.remote_data[i]), UVM_NONE)
+            foreach (exp_words[i])
+                `uvm_info("bird_scoreboard", $sformatf("  EXP  word[%02d] = 0x%08h", i, exp_words[i]), UVM_NONE)
             pass = 0;
         end else begin
             foreach (exp_words[i]) begin
