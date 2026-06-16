@@ -72,11 +72,10 @@ class bird_in_monitor extends uvm_monitor;
         pkt.seq_num      = captured_cfg[28:24];
         pkt.rsvd_31_29   = captured_cfg[31:29];
 
-        // Total stream = payload_len + 2 (CRC bytes)
-        total_bytes = int'(pkt.payload_len) + 2;
+        // Total on-wire bytes = payload_len (data[0..payload_len-3] + CRC[payload_len-2..payload_len-1])
+        total_bytes = int'(pkt.payload_len);
 
-        // Collect byte stream (payload_len + 2 CRC bytes)
-        // First byte already visible on this cycle
+        // Collect byte stream; first byte already visible on this cycle
         stream.push_back(8'(vif.monitor_cb.data_in));
         @(vif.monitor_cb);
 
@@ -88,14 +87,12 @@ class bird_in_monitor extends uvm_monitor;
                 @(vif.monitor_cb);
         end
 
-        // Extract payload and CRC from stream
-        pkt.payload = new[pkt.payload_len];
-        for (int i = 0; i < int'(pkt.payload_len); i++)
+        // Extract data payload (first payload_len-2 bytes) and CRC (last 2 bytes)
+        pkt.payload = new[int'(pkt.payload_len) - 2];
+        for (int i = 0; i < int'(pkt.payload_len) - 2; i++)
             pkt.payload[i] = stream[i];
 
-        if (stream.size() >= total_bytes) begin
-            pkt.crc16 = {stream[int'(pkt.payload_len)], stream[int'(pkt.payload_len) + 1]};
-        end
+        pkt.crc16 = {stream[int'(pkt.payload_len) - 2], stream[int'(pkt.payload_len) - 1]};
 
         `uvm_info("bird_in_monitor",
             $sformatf("Collected: %s", pkt.convert2string()), UVM_HIGH)
