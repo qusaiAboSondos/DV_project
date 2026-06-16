@@ -10,7 +10,7 @@ class remote_basic_test extends bird_base_test;
         remote_inorder_seq seq = remote_inorder_seq::type_id::create("seq");
         phase.raise_objection(this);
         seq.start(env.agent.sequencer);
-        #200;
+        #5000;
         phase.drop_objection(this);
     endtask
 endclass : remote_basic_test
@@ -24,7 +24,7 @@ class remote_outoforder_test extends bird_base_test;
         remote_outoforder_seq seq = remote_outoforder_seq::type_id::create("seq");
         phase.raise_objection(this);
         seq.start(env.agent.sequencer);
-        #300;
+        #5000;
         phase.drop_objection(this);
     endtask
 endclass : remote_outoforder_test

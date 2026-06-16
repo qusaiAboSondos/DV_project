@@ -24,7 +24,7 @@ class rand_test extends bird_base_test;
         rand_test_seq seq = rand_test_seq::type_id::create("seq");
         phase.raise_objection(this);
         seq.start(env.agent.sequencer);
-        #500;
+        #20000;
         phase.drop_objection(this);
     endtask
 endclass : rand_test
