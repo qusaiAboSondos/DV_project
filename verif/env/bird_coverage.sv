@@ -27,9 +27,9 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
     covergroup cg_payload_len;
         cp_len: coverpoint current_pkt.payload_len {
             bins min_len     = {1};
-            bins small       = {[2:15]};
+            bins sm       = {[2:15]};
             bins typical     = {[16:127]};
-            bins large       = {[128:254]};
+            bins lg       = {[128:254]};
             bins max_len     = {255};
             bins zero_invalid = {0};
         }
