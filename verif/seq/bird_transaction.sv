@@ -26,7 +26,9 @@ class bird_transaction extends uvm_sequence_item;
     }
 
     constraint c_valid_payload_len {
-        payload_len inside {[1:255]};
+        // payload_len = total bytes on wire (data + 2 CRC bytes); minimum 4
+        // so the DUT's payload_left==3 CRC-transition fires at least once.
+        payload_len inside {[4:255]};
     }
 
     constraint c_valid_frag_num {
@@ -44,7 +46,9 @@ class bird_transaction extends uvm_sequence_item;
     }
 
     constraint c_payload_size {
-        payload.size() == payload_len;
+        // payload carries data bytes only; DUT RX_CRC consumes the 2 CRC bytes
+        // separately, so the on-wire stream is payload.size()+2 == payload_len.
+        payload.size() == payload_len - 2;
     }
 
     // Local traffic: seq_num must be 1 AND frag_num must be 1
