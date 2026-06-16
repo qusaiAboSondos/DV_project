@@ -15,16 +15,11 @@
 └── test_plan.csv    Test plan (39 items)
 ```
 
-### Running Simulation (VCS)
-```bash
-vcs -sverilog -ntb_opts uvm-1.2 \
-    design/bird.sv \
-    verif/if/bird_if.sv \
-    verif/cfg/bird_pkg.sv \
-    verif/tb/tb_top.sv \
-    +incdir+verif/cfg \
-    -cm line+cond+branch+tgl \
-    -o simv
-
-./simv +UVM_TESTNAME=rand_test +UVM_VERBOSITY=UVM_LOW -cm line+cond+branch+tgl
-```
+### Running Simulation 
+git pull
+make compile
+make sim_remote
+make sim_remote_ooo
+make sim_backpressure
+make sim_rand
+make sim_local
