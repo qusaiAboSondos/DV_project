@@ -162,10 +162,13 @@ class bird_scoreboard extends uvm_scoreboard;
         if (pos > total) begin
             `uvm_info("bird_scoreboard",
                 $sformatf("Drop: seq_num(%0d) > frag_num(%0d)", pos, total), UVM_MEDIUM)
+            // DUT calls inc_drop_cnt() twice in the same always_ff block when
+            // remote_active (once for in-flight via drop_remote_packet_counted,
+            // once for the bad packet).  Both are NB assignments from the same
+            // old drop_cnt value, so the second overwrites the first — net
+            // effect is exactly ONE increment regardless of remote_active.
             expected_drop_cnt++;
             if (remote_active) begin
-                // Flush in-flight assembly and count as drop
-                expected_drop_cnt++;
                 frag_payload_by_pos.delete();
                 frag_seen_pos.delete();
                 remote_max_frag = 0;
