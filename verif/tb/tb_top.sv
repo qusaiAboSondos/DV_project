@@ -70,6 +70,10 @@ module tb_top;
         uvm_config_db #(virtual bird_if.monitor_mp)::set(
             null, "uvm_test_top.*", "vif", dut_if.monitor_mp);
 
+        // Register plain interface for scoreboard's final drop_cnt snapshot
+        uvm_config_db #(virtual bird_if)::set(
+            null, "uvm_test_top.*", "vif_plain", dut_if);
+
         // Start UVM test (test name passed via +UVM_TESTNAME=<test>)
         run_test();
     end

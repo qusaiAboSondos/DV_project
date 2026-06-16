@@ -17,6 +17,9 @@ class bird_scoreboard extends uvm_scoreboard;
     uvm_analysis_imp_local  #(bird_output_txn,  bird_scoreboard) local_imp;
     uvm_analysis_imp_remote #(bird_output_txn,  bird_scoreboard) remote_imp;
 
+    // Direct interface access for final drop_cnt snapshot
+    virtual bird_if vif;
+
     // -------------------------------------------------------------------------
     // Internal reference model state
     // -------------------------------------------------------------------------
@@ -54,6 +57,8 @@ class bird_scoreboard extends uvm_scoreboard;
         input_imp  = new("input_imp",  this);
         local_imp  = new("local_imp",  this);
         remote_imp = new("remote_imp", this);
+        if (!uvm_config_db #(virtual bird_if)::get(this, "", "vif_plain", vif))
+            `uvm_fatal("bird_scoreboard", "Cannot get virtual interface")
         expected_drop_cnt = 0;
         observed_drop_cnt = 0;
         checks_passed     = 0;
@@ -341,6 +346,9 @@ class bird_scoreboard extends uvm_scoreboard;
     // -------------------------------------------------------------------------
     function void check_phase(uvm_phase phase);
         super.check_phase(phase);
+
+        // Final drop_cnt snapshot directly from the interface
+        observed_drop_cnt = int'(vif.drop_cnt);
 
         // Check drop counter (16-bit wrapping per spec)
         if (observed_drop_cnt !== (expected_drop_cnt & 16'hFFFF)) begin
