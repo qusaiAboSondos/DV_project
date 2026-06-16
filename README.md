@@ -16,11 +16,17 @@
 ```
 
 ### Running Simulation 
+
 git pull
 
 make compile
+
 make sim_remote
+
 make sim_remote_ooo
+
 make sim_backpressure
+
 make sim_rand
+
 make sim_local
