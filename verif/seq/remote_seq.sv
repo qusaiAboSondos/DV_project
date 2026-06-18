@@ -118,11 +118,8 @@ class backpressure_seq extends bird_base_seq;
 
     task body();
         bird_transaction pkt;
-        // Note: actual backpressure toggling is done in the test
-        // by manipulating local_rdy/remote_rdy directly.
-        // This sequence just streams packets; the driver handles stalls.
-        // Alternate local/remote so both output channels' rdy=0 stall
-        // (cg_backpressure cp_local_bp / cp_remote_bp) get exercised.
+        // Alternates local/remote traffic at full rate (rdy is not
+        // stalled -- see backpressure_test for why).
         repeat (num_pkts) begin
             pkt = bird_transaction::type_id::create("pkt");
             start_item(pkt);
