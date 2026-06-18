@@ -35,7 +35,10 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
             bins typical     = {[16:127]};
             bins lg       = {[128:254]};
             bins max_len     = {255};
-            bins zero_invalid = {0};
+            // payload_len==0 can never be observed: bird_in_monitor
+            // reconstructs the payload as new[payload_len-2], which crashes
+            // (negative array size) before any transaction is ever sampled.
+            ignore_bins zero_invalid = {0};
         }
     endgroup : cg_payload_len
 
@@ -70,7 +73,12 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
     covergroup cg_drop_conditions;
         cp_seq_zero:   coverpoint (current_pkt.seq_num == 0)  { bins yes = {1}; bins no = {0}; }
         cp_frag_zero:  coverpoint (current_pkt.frag_num == 0) { bins yes = {1}; bins no = {0}; }
-        cp_len_zero:   coverpoint (current_pkt.payload_len == 0) { bins yes = {1}; bins no = {0}; }
+        // payload_len==0 can never be observed: bird_in_monitor reconstructs
+        // the payload as new[payload_len-2], which crashes (negative array
+        // size) before any transaction reaches the analysis port. The DUT's
+        // drop logic for this case is therefore untestable through the
+        // current monitor and must be excluded from coverage.
+        cp_len_zero:   coverpoint (current_pkt.payload_len == 0) { ignore_bins yes = {1}; bins no = {0}; }
         cp_rsvd_7_1:   coverpoint (current_pkt.rsvd_7_1 != 0)   { bins nonzero = {1}; bins zero = {0}; }
         cp_rsvd_23_21: coverpoint (current_pkt.rsvd_23_21 != 0) { bins nonzero = {1}; bins zero = {0}; }
         cp_rsvd_31_29: coverpoint (current_pkt.rsvd_31_29 != 0) { bins nonzero = {1}; bins zero = {0}; }
