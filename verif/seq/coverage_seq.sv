@@ -40,6 +40,10 @@ class payload_sweep_seq extends bird_base_seq;
             })
                 `uvm_fatal("payload_sweep_seq", "Randomisation failed")
             finish_item(pkt);
+            // Let the remote output queue fully drain (remote_vld must drop
+            // to 0) before the next remote packet's words can be told apart
+            // by the monitor, which segments transactions on remote_vld.
+            #1000;
         end
         `uvm_info("payload_sweep_seq",
             "Sent payload-length sweep packets (sm/typical/lg/max bins)", UVM_LOW)
