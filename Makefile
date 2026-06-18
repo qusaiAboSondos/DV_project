@@ -25,7 +25,7 @@ compile: $(SRCS)
 
 compile_cov: $(SRCS)
 	rm -rf $(CMDIR)
-	$(VCS) $(VCSFLAGS) $(CMFLAGS) $(SRCS) -o simv
+	$(VCS) $(VCSFLAGS) $(CMFLAGS) -cm_dir $(CMDIR) $(SRCS) -o simv
 
 sim_local: simv
 	$(SIMV) +UVM_TESTNAME=local_basic_test +UVM_VERBOSITY=UVM_LOW -l sim_local.log
