@@ -204,6 +204,7 @@ module bird (
           end
 
           RX_PAYLOAD: begin
+            rx_drop = cfg_invalid(cfg);
             if ((!rx_is_remote && remote_active) || (rx_is_remote && !remote_active)) rx_drop = 1;
             if (!rx_drop) begin
               if (!rx_is_remote) local_q.push_back(data_in);
