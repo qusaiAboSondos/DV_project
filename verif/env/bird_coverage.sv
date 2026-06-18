@@ -90,9 +90,11 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
             bins backpressure_seen = {1};
             bins no_backpressure   = {0};
         }
+        // DUT hard-wires in_rdy=1 (always_comb in_rdy = 1'b1), so the input
+        // side can never stall; only the no_backpressure bin is reachable.
         cp_in_bp:     coverpoint bp_in_stall {
-            bins backpressure_seen = {1};
             bins no_backpressure   = {0};
+            ignore_bins backpressure_seen = {1};
         }
     endgroup : cg_backpressure
 
@@ -106,7 +108,15 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
             bins few     = {[2:5]};
             bins many    = {[6:31]};
         }
-        cx_type_frag: cross cp_type, cp_frag;
+        // LOCAL traffic is only valid with frag_num==1 (c_local_frag), so
+        // local+few/local+many can never occur and must not count against
+        // the cross coverage score.
+        cx_type_frag: cross cp_type, cp_frag {
+            ignore_bins local_multi_frag =
+                binsof(cp_type) intersect {0} && binsof(cp_frag.few);
+            ignore_bins local_many_frag  =
+                binsof(cp_type) intersect {0} && binsof(cp_frag.many);
+        }
     endgroup : cg_cross
 
     // -------------------------------------------------------------------------

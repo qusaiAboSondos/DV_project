@@ -75,6 +75,54 @@ class drop_reserved_bits_seq extends bird_base_seq;
 endclass : drop_reserved_bits_seq
 
 // ------------------------------------------------------------
+// drop_reserved_bits_23_21_seq — nonzero rsvd[23:21] → drop
+// ------------------------------------------------------------
+class drop_reserved_bits_23_21_seq extends bird_base_seq;
+    `uvm_object_utils(drop_reserved_bits_23_21_seq)
+
+    function new(string name = "drop_reserved_bits_23_21_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        bird_transaction pkt = bird_transaction::type_id::create("pkt");
+        start_item(pkt);
+        if (!pkt.randomize() with {
+            payload_len inside {[1:32]};
+        })
+            `uvm_fatal("drop_reserved_bits_23_21_seq", "Randomisation failed")
+        pkt.rsvd_23_21 = 3'h5;
+        finish_item(pkt);
+        `uvm_info("drop_reserved_bits_23_21_seq",
+            "Sent packet with nonzero rsvd[23:21] (expect drop)", UVM_LOW)
+    endtask
+endclass : drop_reserved_bits_23_21_seq
+
+// ------------------------------------------------------------
+// drop_reserved_bits_31_29_seq — nonzero rsvd[31:29] → drop
+// ------------------------------------------------------------
+class drop_reserved_bits_31_29_seq extends bird_base_seq;
+    `uvm_object_utils(drop_reserved_bits_31_29_seq)
+
+    function new(string name = "drop_reserved_bits_31_29_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        bird_transaction pkt = bird_transaction::type_id::create("pkt");
+        start_item(pkt);
+        if (!pkt.randomize() with {
+            payload_len inside {[1:32]};
+        })
+            `uvm_fatal("drop_reserved_bits_31_29_seq", "Randomisation failed")
+        pkt.rsvd_31_29 = 3'h5;
+        finish_item(pkt);
+        `uvm_info("drop_reserved_bits_31_29_seq",
+            "Sent packet with nonzero rsvd[31:29] (expect drop)", UVM_LOW)
+    endtask
+endclass : drop_reserved_bits_31_29_seq
+
+// ------------------------------------------------------------
 // drop_local_seq_num_not_one_seq — LOCAL with seq_num != 1 → drop
 // In the behavioral model, LOCAL traffic is valid only when
 // both seq_num==1 AND frag_num==1.  Sending seq_num=2 with

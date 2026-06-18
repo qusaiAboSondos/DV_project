@@ -17,6 +17,7 @@ package bird_pkg;
     `include "verif/seq/local_seq.sv"
     `include "verif/seq/remote_seq.sv"
     `include "verif/seq/drop_seq.sv"
+    `include "verif/seq/coverage_seq.sv"
 
     // Environment components
     `include "verif/env/bird_monitor.sv"
@@ -33,6 +34,7 @@ package bird_pkg;
     `include "verif/tests/remote_test.sv"
     `include "verif/tests/drop_test.sv"
     `include "verif/tests/rand_test.sv"
+    `include "verif/tests/coverage_test.sv"
 
 endpackage : bird_pkg
 
