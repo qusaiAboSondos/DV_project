@@ -16,7 +16,7 @@ SRCS := verif/if/bird_if.sv \
         verif/tb/tb_top.sv \
         design/bird.sv
 
-.PHONY: all compile compile_cov sim_local sim_remote sim_remote_ooo sim_backpressure sim_drop sim_rand sim_coverage sim_all sim_all_cov coverage_report clean
+.PHONY: all compile compile_cov sim_local sim_remote sim_remote_ooo sim_backpressure sim_drop sim_rand sim_coverage sim_drop_while_active sim_all sim_all_cov coverage_report clean
 
 all: compile
 
@@ -48,6 +48,9 @@ sim_rand: simv
 sim_coverage: simv
 	$(SIMV) +UVM_TESTNAME=coverage_test +UVM_VERBOSITY=UVM_LOW -l sim_coverage.log
 
+sim_drop_while_active: simv
+	$(SIMV) +UVM_TESTNAME=drop_while_active_test +UVM_VERBOSITY=UVM_LOW -l sim_drop_while_active.log
+
 sim_all: simv
 	$(SIMV) +UVM_TESTNAME=local_basic_test    +UVM_VERBOSITY=UVM_LOW -l sim_local.log
 	$(SIMV) +UVM_TESTNAME=remote_basic_test   +UVM_VERBOSITY=UVM_LOW -l sim_remote.log
@@ -56,6 +59,7 @@ sim_all: simv
 	$(SIMV) +UVM_TESTNAME=drop_conditions_test +UVM_VERBOSITY=UVM_LOW -l sim_drop.log
 	$(SIMV) +UVM_TESTNAME=rand_test           +UVM_VERBOSITY=UVM_LOW -l sim_rand.log
 	$(SIMV) +UVM_TESTNAME=coverage_test       +UVM_VERBOSITY=UVM_LOW -l sim_coverage.log
+	$(SIMV) +UVM_TESTNAME=drop_while_active_test +UVM_VERBOSITY=UVM_LOW -l sim_drop_while_active.log
 
 # Run every test with coverage enabled, accumulating into one $(CMDIR)
 sim_all_cov: compile_cov
@@ -66,6 +70,7 @@ sim_all_cov: compile_cov
 	$(SIMV) $(CMFLAGS) -cm_name drop_conditions_test    -cm_dir $(CMDIR) +UVM_TESTNAME=drop_conditions_test   +UVM_VERBOSITY=UVM_LOW -l sim_drop.log
 	$(SIMV) $(CMFLAGS) -cm_name rand_test               -cm_dir $(CMDIR) +UVM_TESTNAME=rand_test              +UVM_VERBOSITY=UVM_LOW -l sim_rand.log
 	$(SIMV) $(CMFLAGS) -cm_name coverage_test           -cm_dir $(CMDIR) +UVM_TESTNAME=coverage_test          +UVM_VERBOSITY=UVM_LOW -l sim_coverage.log
+	$(SIMV) $(CMFLAGS) -cm_name drop_while_active_test  -cm_dir $(CMDIR) +UVM_TESTNAME=drop_while_active_test +UVM_VERBOSITY=UVM_LOW -l sim_drop_while_active.log
 
 # Generate code coverage (line/cond/branch/toggle/fsm) and functional
 # coverage (covergroup "group" metric) reports from the merged $(CMDIR)
