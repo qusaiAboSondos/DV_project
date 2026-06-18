@@ -24,7 +24,7 @@ compile: $(SRCS)
 	$(VCS) $(VCSFLAGS) $(SRCS) -o simv
 
 compile_cov: $(SRCS)
-	rm -rf $(CMDIR)
+	rm -rf $(CMDIR) simv simv.daidir csrc
 	$(VCS) $(VCSFLAGS) $(CMFLAGS) -cm_dir $(CMDIR) $(SRCS) -o simv
 
 sim_local: simv
