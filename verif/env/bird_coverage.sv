@@ -26,7 +26,11 @@ class bird_coverage extends uvm_subscriber #(bird_transaction);
     // -------------------------------------------------------------------------
     covergroup cg_payload_len;
         cp_len: coverpoint current_pkt.payload_len {
-            bins min_len     = {1};
+            // payload_len==1 is structurally unreachable: c_payload_size
+            // requires payload.size() == payload_len-2, which would need
+            // a negative array size, so no transaction can ever carry
+            // payload_len==1 on the wire.
+            ignore_bins min_len = {1};
             bins sm       = {[2:15]};
             bins typical     = {[16:127]};
             bins lg       = {[128:254]};

@@ -123,6 +123,35 @@ class drop_reserved_bits_31_29_seq extends bird_base_seq;
 endclass : drop_reserved_bits_31_29_seq
 
 // ------------------------------------------------------------
+// drop_payload_len_zero_seq — PAYLOAD_LEN==0 → drop
+// Hits cg_payload_len.zero_invalid and cg_drop_conditions.cp_len_zero.yes
+// ------------------------------------------------------------
+class drop_payload_len_zero_seq extends bird_base_seq;
+    `uvm_object_utils(drop_payload_len_zero_seq)
+
+    function new(string name = "drop_payload_len_zero_seq");
+        super.new(name);
+    endfunction
+
+    task body();
+        bird_transaction pkt = bird_transaction::type_id::create("pkt");
+        start_item(pkt);
+        // Disable the constraints that forbid payload_len==0 / empty payload
+        pkt.c_valid_payload_len.constraint_mode(0);
+        pkt.c_payload_size.constraint_mode(0);
+        if (!pkt.randomize() with {
+            payload_len == 0;
+            payload.size() == 0;
+        })
+            `uvm_fatal("drop_payload_len_zero_seq", "Randomisation failed")
+        pkt.crc16 = bird_transaction::calc_crc16(pkt.payload);
+        finish_item(pkt);
+        `uvm_info("drop_payload_len_zero_seq",
+            "Sent PAYLOAD_LEN=0 packet (expect drop)", UVM_LOW)
+    endtask
+endclass : drop_payload_len_zero_seq
+
+// ------------------------------------------------------------
 // drop_local_seq_num_not_one_seq — LOCAL with seq_num != 1 → drop
 // In the behavioral model, LOCAL traffic is valid only when
 // both seq_num==1 AND frag_num==1.  Sending seq_num=2 with

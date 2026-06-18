@@ -121,15 +121,23 @@ class backpressure_seq extends bird_base_seq;
         // Note: actual backpressure toggling is done in the test
         // by manipulating local_rdy/remote_rdy directly.
         // This sequence just streams packets; the driver handles stalls.
+        // Alternate local/remote so both output channels' rdy=0 stall
+        // (cg_backpressure cp_local_bp / cp_remote_bp) get exercised.
         repeat (num_pkts) begin
             pkt = bird_transaction::type_id::create("pkt");
             start_item(pkt);
             if (!pkt.randomize() with { traffic_type == 0; })
                 `uvm_fatal("backpressure_seq", "Randomisation failed")
             finish_item(pkt);
+
+            pkt = bird_transaction::type_id::create("pkt");
+            start_item(pkt);
+            if (!pkt.randomize() with { traffic_type == 1; })
+                `uvm_fatal("backpressure_seq", "Randomisation failed")
+            finish_item(pkt);
         end
         `uvm_info("backpressure_seq",
-            $sformatf("Sent %0d packets under backpressure conditions", num_pkts), UVM_LOW)
+            $sformatf("Sent %0d local + %0d remote packets under backpressure conditions", num_pkts, num_pkts), UVM_LOW)
     endtask
 endclass : backpressure_seq
 
