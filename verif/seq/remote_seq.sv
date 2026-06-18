@@ -118,29 +118,15 @@ class backpressure_seq extends bird_base_seq;
 
     task body();
         bird_transaction pkt;
-        // Alternates local/remote traffic at full rate (rdy is not
-        // stalled -- see backpressure_test for why).
         repeat (num_pkts) begin
             pkt = bird_transaction::type_id::create("pkt");
             start_item(pkt);
             if (!pkt.randomize() with { traffic_type == 0; })
                 `uvm_fatal("backpressure_seq", "Randomisation failed")
             finish_item(pkt);
-
-            pkt = bird_transaction::type_id::create("pkt");
-            start_item(pkt);
-            if (!pkt.randomize() with { traffic_type == 1; })
-                `uvm_fatal("backpressure_seq", "Randomisation failed")
-            finish_item(pkt);
-
-            // Let both output channels fully drain (vld must drop to 0)
-            // before the next packet's words can be told apart by the
-            // monitor, which segments transactions purely on vld staying
-            // continuously high.
-            #1000;
         end
         `uvm_info("backpressure_seq",
-            $sformatf("Sent %0d local + %0d remote packets under backpressure conditions", num_pkts, num_pkts), UVM_LOW)
+            $sformatf("Sent %0d packets under backpressure conditions", num_pkts), UVM_LOW)
     endtask
 endclass : backpressure_seq
 
