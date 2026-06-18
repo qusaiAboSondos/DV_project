@@ -16,7 +16,7 @@ SRCS := verif/if/bird_if.sv \
         verif/tb/tb_top.sv \
         design/bird.sv
 
-.PHONY: all compile compile_cov sim_local sim_remote sim_remote_ooo sim_backpressure sim_drop sim_rand sim_coverage sim_drop_while_active sim_all sim_all_cov coverage_report clean
+.PHONY: all compile compile_cov sim_local sim_remote sim_remote_ooo sim_backpressure sim_drop sim_rand sim_coverage sim_drop_while_active sim_drop_cnt_wrap sim_all sim_all_cov coverage_report clean
 
 all: compile
 
@@ -50,6 +50,12 @@ sim_coverage: simv
 
 sim_drop_while_active: simv
 	$(SIMV) +UVM_TESTNAME=drop_while_active_test +UVM_VERBOSITY=UVM_LOW -l sim_drop_while_active.log
+
+# TP-030: drop_cnt 16-bit wraparound (65537 drops). Standalone target —
+# not part of sim_all/sim_all_cov since it streams a large packet count
+# and the DUT's per-cycle debug $display output would bloat regression logs.
+sim_drop_cnt_wrap: simv
+	$(SIMV) +UVM_TESTNAME=drop_cnt_wraparound_test +UVM_VERBOSITY=UVM_LOW -l sim_drop_cnt_wrap.log
 
 sim_all: simv
 	$(SIMV) +UVM_TESTNAME=local_basic_test    +UVM_VERBOSITY=UVM_LOW -l sim_local.log
