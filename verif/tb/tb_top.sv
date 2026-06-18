@@ -79,10 +79,11 @@ module tb_top;
     end
 
     // -------------------------------------------------------------------------
-    // Simulation timeout watchdog - abort after 1 ms simulated time
+    // Simulation timeout watchdog - abort after 10 ms simulated time
+    // (raised from 1ms to accommodate the 65537-packet drop_cnt_wraparound_test)
     // -------------------------------------------------------------------------
     initial begin
-        #1_000_000;
+        #10_000_000;
         `uvm_fatal("tb_top", "Simulation timeout - possible hang detected")
     end
 
