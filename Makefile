@@ -9,7 +9,7 @@ SRCS := verif/if/bird_if.sv \
         verif/tb/tb_top.sv \
         design/bird.sv
 
-.PHONY: all compile sim_local sim_remote sim_remote_ooo sim_backpressure sim_rand clean
+.PHONY: all compile sim_local sim_remote sim_remote_ooo sim_backpressure sim_drop sim_rand sim_all clean
 
 all: compile
 
@@ -28,6 +28,9 @@ sim_remote_ooo: simv
 sim_backpressure: simv
 	$(SIMV) +UVM_TESTNAME=backpressure_test +UVM_VERBOSITY=UVM_LOW -l sim_backpressure.log
 
+sim_drop: simv
+	$(SIMV) +UVM_TESTNAME=drop_conditions_test +UVM_VERBOSITY=UVM_LOW -l sim_drop.log
+
 sim_rand: simv
 	$(SIMV) +UVM_TESTNAME=rand_test +UVM_VERBOSITY=UVM_LOW -l sim_rand.log
 
@@ -36,6 +39,7 @@ sim_all: simv
 	$(SIMV) +UVM_TESTNAME=remote_basic_test   +UVM_VERBOSITY=UVM_LOW -l sim_remote.log
 	$(SIMV) +UVM_TESTNAME=remote_outoforder_test +UVM_VERBOSITY=UVM_LOW -l sim_remote_ooo.log
 	$(SIMV) +UVM_TESTNAME=backpressure_test   +UVM_VERBOSITY=UVM_LOW -l sim_backpressure.log
+	$(SIMV) +UVM_TESTNAME=drop_conditions_test +UVM_VERBOSITY=UVM_LOW -l sim_drop.log
 	$(SIMV) +UVM_TESTNAME=rand_test           +UVM_VERBOSITY=UVM_LOW -l sim_rand.log
 
 clean:
